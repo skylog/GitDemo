@@ -6,6 +6,7 @@ class Program
     {
         Console.WriteLine("Hello, World!");//1
         //2
-        //123456
+        //123
+        //456
     }
 }
