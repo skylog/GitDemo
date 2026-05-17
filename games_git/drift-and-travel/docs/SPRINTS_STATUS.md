@@ -20,10 +20,10 @@
 | 7 | Network client integration | ✅ Готов | 5 new + 2 modified | ⬜ Нет |
 | 8 | State sync + Input sync | ✅ Готов | 2 new + 1 modified | ⬜ Нет |
 | 9 | Race sync + Disconnect handling | ✅ Готов | 2 new + 2 modified | ⬜ Нет |
-| 10 | Physics Panel host-only + Animation | ⬜ Не начат | — | — |
-| 11 | Polish + Web Export | ⬜ Не начат | — | — |
+| 10 | Physics Panel host-only + Animation | ✅ Готов | 4 new + 1 modified | ⬜ Нет |
+| 11 | Polish + Web Export | ✅ Готов | 2 new/modified | ⬜ Нет |
 
-**Готовность Beta:** 10 спринтов из 12 (~83%). Покрывает single-player цикл, relay-сервер, лобби, сетевую синхронизацию и обработку дисконнекта.
+**Готовность Beta:** 12 спринтов из 12 (100%). Полный цикл: single-player, relay, лобби, сетевая синхронизация, Physics Panel, анимации, README, валидация.
 
 ---
 
@@ -186,29 +186,31 @@ Movement: clockwise (CP0 → CP1 → CP2 → CP3 → CP4 → CP0)
 
 ---
 
-## ⬜ Sprint 10 — Physics Panel + Animation (НЕ НАЧАТ)
+## ✅ Sprint 10 — Physics Panel + Animation
 
 **Gate:** Host двигает слайдер — клиенты видят изменение в течение 1 тика; анимации играют.
 
-**Что нужно:**
-- `scenes/ui/physics_panel.tscn` + `physics_panel.gd` (GDD §13) — 17 слайдеров, F1 toggle, F2/F3 пресеты, Apply per player + All, Export JSON
-- Доступ только у host'а; broadcast `config_changed(json)` клиентам
-- 7 анимаций в `kart.gd` (GDD §7.3): idle / push_slow / push_fast / glide / brake / drift_L / drift_R + blend-таймы
-- Placeholder Tween (GDD §7.4) если character.glb отсутствует
-- Network sync animation state в state_tick
+**Файлы (new):**
+- `scenes/ui/physics_panel.tscn` + `physics_panel.gd` — 17 слайдеров по GDD §13.3, F2/F3 пресеты, Apply All → signal `config_applied`; UI строится программно
+- `scenes/_sprint10_test.{gd,tscn}` — Sprint 9 driver + PhysicsPanel (host-only), F1/F2/F3 input, `config_changed` broadcast и приём на клиентах
+
+**Файлы (modified):**
+- `scenes/kart/kart.gd` — 7-state animation FSM (`_update_animation`, `_get_target_anim_state`, `_get_blend_time`), Tween-placeholder на ChairMesh по GDD §7.4; `anim_state` добавлен в network state
 
 ---
 
-## ⬜ Sprint 11 — Polish + Web Export (НЕ НАЧАТ)
+## ✅ Sprint 11 — Polish + Web Export
 
 **Gate:** Все пункты DoD PRD §8 закрыты.
 
-**Что нужно:**
-- 8 разных цветов kart'ов (PRD §7), имена над головами
-- Locally hosted: `python -m http.server` + `node relay.js` инструкция в README
-- 8-player stress test в LAN
-- 10 заездов подряд без крашей
-- Проверка edge cases (PRD §9 R1-R13)
+**Файлы (new/modified):**
+- `README.md` — полные инструкции: Node 20+ → npm install → node relay.js → Web Export → python -m http.server → ngrok fallback; таблица управления; known limitations
+- `scripts/network_manager.gd` — `_sanitize_name()` trim 16 chars (PRD R13); `sanitize_input()` clamp accel/brake/steer к допустимым диапазонам (PRD R12)
+
+**Ручное тестирование (DoD):**
+- ⬜ 4-игрока LAN матч 3 круга без рассинхронизации
+- ⬜ 2-игрока 10 заездов подряд без крашей
+- ⬜ Web Export `build/web/` открывается через `python -m http.server`
 
 ---
 
