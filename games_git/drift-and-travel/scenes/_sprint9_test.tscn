@@ -1,0 +1,26 @@
+[gd_scene load_steps=8 format=3 uid="uid://b9testsprint9"]
+
+[ext_resource type="Script" path="res://scenes/_sprint9_test.gd" id="1_driver"]
+[ext_resource type="PackedScene" uid="uid://btrack0sprint3" path="res://scenes/track/test_track.tscn" id="2_track"]
+[ext_resource type="PackedScene" uid="uid://bmenusprint7" path="res://scenes/ui/menu.tscn" id="3_menu"]
+[ext_resource type="PackedScene" uid="uid://blobbysprint7" path="res://scenes/ui/lobby.tscn" id="4_lobby"]
+[ext_resource type="PackedScene" uid="uid://bhudsprint5" path="res://scenes/ui/hud.tscn" id="5_hud"]
+[ext_resource type="PackedScene" uid="uid://bcountdownsprint4" path="res://scenes/ui/countdown.tscn" id="6_cd"]
+[ext_resource type="PackedScene" uid="uid://bresultssprint4" path="res://scenes/ui/results.tscn" id="7_res"]
+
+[node name="Sprint9Test" type="Node"]
+script = ExtResource("1_driver")
+
+[node name="TestTrack" parent="." instance=ExtResource("2_track")]
+
+[node name="KartsRoot" type="Node3D" parent="."]
+
+[node name="MenuUI" parent="." instance=ExtResource("3_menu")]
+
+[node name="LobbyUI" parent="." instance=ExtResource("4_lobby")]
+
+[node name="HUD" parent="." instance=ExtResource("5_hud")]
+
+[node name="CountdownUI" parent="." instance=ExtResource("6_cd")]
+
+[node name="ResultsUI" parent="." instance=ExtResource("7_res")]
