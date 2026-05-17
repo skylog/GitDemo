@@ -48,6 +48,12 @@ var _net_input: Dictionary = {}
 var _net_states: Array = []
 const _NET_INTERP_DELAY := 0.1
 
+# --- ANIMATION (Sprint 10) ---
+var anim_state: String = "anim_idle"
+var _anim_player: AnimationPlayer = null
+var _chair_mesh: Node3D = null
+var _push_tween: Tween = null
+
 # --- HUD CACHE ---
 var speed_kmh: int = 0
 
@@ -68,6 +74,11 @@ func _ready() -> void:
 
 	_respawn_timer.timeout.connect(_on_respawn_timeout)
 	_name_label.text = player_name
+
+	if has_node("CharacterRig/AnimationPlayer"):
+		_anim_player = $CharacterRig/AnimationPlayer
+	if has_node("ChairMesh"):
+		_chair_mesh = $ChairMesh
 
 	if config == null:
 		config = load("res://resources/presets/mario_kart.tres") as KartConfig
@@ -90,6 +101,8 @@ func _process(delta: float) -> void:
 	_update_camera(delta)
 	_update_race_timers(delta)
 	speed_kmh = int(abs(current_speed) * 3.6)
+	if not is_interpolated:
+		_update_animation()
 
 func _update_camera(delta: float) -> void:
 	var lag = 1.0 - config.camera_rotation_lag
@@ -255,6 +268,7 @@ func get_network_state() -> Dictionary:
 		"next_cp":       next_checkpoint_index,
 		"is_finished":   is_finished,
 		"total_time":    total_race_time,
+		"anim_state":    anim_state,
 	}
 
 func apply_network_state(state: Dictionary) -> void:
@@ -275,9 +289,87 @@ func apply_network_state(state: Dictionary) -> void:
 	next_checkpoint_index = state.get("next_cp",       next_checkpoint_index)
 	is_finished           = state.get("is_finished",   is_finished)
 	total_race_time       = state.get("total_time",    total_race_time)
+	var incoming_anim: String = state.get("anim_state", "")
+	if not incoming_anim.is_empty() and incoming_anim != anim_state:
+		anim_state = incoming_anim
+		_play_placeholder_anim(anim_state)
 
 func apply_remote_input(input: Dictionary) -> void:
 	_net_input = input
+
+# ── Sprint 10: animation ─────────────────────────────────────────────────────
+
+func _update_animation() -> void:
+	var new_state := _get_target_anim_state()
+	if new_state == anim_state:
+		return
+	var blend := _get_blend_time(anim_state, new_state)
+	anim_state = new_state
+	if _anim_player != null and _anim_player.has_animation(anim_state):
+		_anim_player.play(anim_state, blend)
+	else:
+		_play_placeholder_anim(anim_state)
+
+
+func _get_target_anim_state() -> String:
+	var speed := abs(current_speed)
+	if is_drifting:
+		return "anim_drift_left" if drift_direction == -1 else "anim_drift_right"
+	if input_brake > 0.1 and speed > 1.0:
+		return "anim_brake"
+	if speed < 0.5 and input_accel < 0.1:
+		return "anim_idle"
+	if speed >= config.anim_glide_min_speed and input_accel < 0.1:
+		return "anim_glide"
+	if input_accel > 0.1:
+		return "anim_push_slow" if speed < config.anim_push_slow_max_speed else "anim_push_fast"
+	if speed > 1.0:
+		return "anim_glide"
+	return "anim_idle"
+
+
+func _get_blend_time(from: String, to: String) -> float:
+	if to == "anim_brake":
+		return 0.05
+	if from == "anim_brake":
+		return 0.20
+	if to.begins_with("anim_drift"):
+		return 0.10
+	if from.begins_with("anim_drift"):
+		return 0.15
+	if from == "anim_idle" and to == "anim_push_slow":
+		return 0.15
+	if from == "anim_push_slow" and to == "anim_push_fast":
+		return 0.10
+	return 0.15
+
+
+func _play_placeholder_anim(state: String) -> void:
+	if _push_tween != null:
+		_push_tween.kill()
+		_push_tween = null
+	if _chair_mesh == null:
+		return
+	match state:
+		"anim_idle":
+			_chair_mesh.rotation_degrees = Vector3.ZERO
+		"anim_push_slow":
+			_push_tween = create_tween().set_loops()
+			_push_tween.tween_property(_chair_mesh, "rotation_degrees:x", -8.0, 0.6)
+			_push_tween.tween_property(_chair_mesh, "rotation_degrees:x", 0.0, 0.6)
+		"anim_push_fast":
+			_push_tween = create_tween().set_loops()
+			_push_tween.tween_property(_chair_mesh, "rotation_degrees:x", -10.0, 0.3)
+			_push_tween.tween_property(_chair_mesh, "rotation_degrees:x", 0.0, 0.3)
+		"anim_glide":
+			_chair_mesh.rotation_degrees = Vector3(-5.0, 0.0, 0.0)
+		"anim_brake":
+			_chair_mesh.rotation_degrees = Vector3(15.0, 0.0, 0.0)
+		"anim_drift_left":
+			_chair_mesh.rotation_degrees = Vector3(0.0, 0.0, -20.0)
+		"anim_drift_right":
+			_chair_mesh.rotation_degrees = Vector3(0.0, 0.0, 20.0)
+
 
 func _interpolate_network(_delta: float) -> void:
 	if _net_states.is_empty():
