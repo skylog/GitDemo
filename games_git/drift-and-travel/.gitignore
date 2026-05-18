@@ -1,0 +1,18 @@
+# Godot
+.godot/
+.import/
+export.cfg
+export_presets.cfg
+*.translation
+build/
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log

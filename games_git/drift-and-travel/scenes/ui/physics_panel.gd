@@ -23,10 +23,10 @@ const _SLIDERS: Array = [
 	{ "node": "LateralFrictionSlider", "prop": "lateral_friction",         "min": 1.0,  "max": 20.0,  "step": 0.5   },
 	{ "node": "AirResistanceSlider",   "prop": "air_resistance",           "min": 0.0,  "max": 0.1,   "step": 0.001 },
 	{ "node": "GlideSpeedSlider",      "prop": "anim_glide_min_speed",     "min": 5.0,  "max": 25.0,  "step": 0.5   },
-	{ "node": "PushFastSpeedSlider",   "prop": "anim_push_fast_min_speed", "min": 2.0,  "max": 15.0,  "step": 0.5   },
+	{ "node": "PushFastSpeedSlider",   "prop": "anim_push_slow_max_speed", "min": 2.0,  "max": 15.0,  "step": 0.5   },
 	{ "node": "CameraDistanceSlider",  "prop": "camera_distance",          "min": 3.0,  "max": 10.0,  "step": 0.1   },
 	{ "node": "CameraHeightSlider",    "prop": "camera_height",            "min": 1.0,  "max": 5.0,   "step": 0.1   },
-	{ "node": "CameraLagSlider",       "prop": "camera_lag",               "min": 0.0,  "max": 0.5,   "step": 0.01  },
+	{ "node": "CameraLagSlider",       "prop": "camera_rotation_lag",      "min": 0.0,  "max": 0.5,   "step": 0.01  },
 ]
 
 var _config: KartConfig

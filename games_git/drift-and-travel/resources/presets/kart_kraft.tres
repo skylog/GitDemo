@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="KartConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://resources/kart_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+acceleration = 12.0
+brake_force = 18.0
+reverse_acceleration = 5.0
+max_speed = 28.0
+max_reverse_speed = 5.0
+steering_speed = 2.2
+max_steering_angle = 22.0
+steering_return_speed = 3.0
+drift_factor = 0.60
+drift_traction_loss = 0.75
+drift_speed_threshold = 12.0
+ground_friction = 0.65
+lateral_friction = 7.0
+air_resistance = 0.035
+gravity_multiplier = 1.8
+camera_distance = 6.5
+camera_height = 2.5
+camera_lag = 0.18
+camera_rotation_lag = 0.22
+anim_push_slow_max_speed = 6.0
+anim_push_fast_min_speed = 6.0
+anim_glide_min_speed = 16.0
+anim_brake_speed_drop = 3.0

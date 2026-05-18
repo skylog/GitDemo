@@ -62,10 +62,20 @@ var _stuck_timer: float = 0.0
 const STUCK_THRESHOLD_SPEED: float = 0.1
 const STUCK_THRESHOLD_TIME: float = 5.0
 
+# --- DEBUG ---
+var _dbg_grounded_prev: bool = false
+var _dbg_input_logged: bool = false
+var _dbg_log_timer: float = 0.0
+const _DBG_LOG_INTERVAL: float = 2.0
+
 func _ready() -> void:
 	axis_lock_angular_x = true
 	axis_lock_angular_z = true
 	can_sleep = false
+	var pm := PhysicsMaterial.new()
+	pm.friction = 0.0
+	pm.bounce = 0.0
+	physics_material_override = pm
 
 	_camera_arm = $CameraArm
 	_respawn_timer = $RespawnTimer
@@ -103,6 +113,7 @@ func _process(delta: float) -> void:
 	speed_kmh = int(abs(current_speed) * 3.6)
 	if not is_interpolated:
 		_update_animation()
+	_debug_log_input()
 
 func _update_camera(delta: float) -> void:
 	var lag = 1.0 - config.camera_rotation_lag
@@ -168,6 +179,9 @@ func _check_grounded() -> void:
 		if ray.is_colliding():
 			hits += 1
 	is_grounded = hits >= 2
+	if is_grounded != _dbg_grounded_prev:
+		print("[Kart:%s] grounded=%s (hits=%d)" % [player_name, is_grounded, hits])
+		_dbg_grounded_prev = is_grounded
 
 func _apply_gravity(_delta: float) -> void:
 	if not is_grounded:
@@ -181,8 +195,10 @@ func _apply_steering(delta: float) -> void:
 		steering_angle = move_toward(steering_angle, target_angle, config.steering_speed * delta)
 	else:
 		steering_angle = move_toward(steering_angle, 0.0, config.steering_return_speed * delta)
-	var turn_amount = current_speed * steering_angle * 0.5
-	apply_torque(Vector3(0, -turn_amount, 0))
+	# Direct angular velocity: avoids torque/angular_damp fight at low speeds.
+	var speed_factor = clamp(abs(current_speed) / 2.0, 0.0, 1.0)
+	var target_yaw = -steering_angle * speed_factor * config.steering_speed * sign(current_speed)
+	angular_velocity.y = lerp(angular_velocity.y, target_yaw, delta * 10.0)
 
 func _apply_acceleration(_delta: float) -> void:
 	var forward = -global_transform.basis.z
@@ -231,10 +247,12 @@ func _check_fell_off_track() -> void:
 		trigger_respawn()
 
 func _check_stuck(delta: float) -> void:
-	if abs(current_speed) < STUCK_THRESHOLD_SPEED and not is_frozen:
+	var is_trying_to_move := input_accel > 0.05 or input_brake > 0.05
+	if is_trying_to_move and abs(current_speed) < STUCK_THRESHOLD_SPEED and not is_frozen:
 		_stuck_timer += delta
 		if _stuck_timer >= STUCK_THRESHOLD_TIME:
 			_stuck_timer = 0.0
+			print("[Kart:%s] stuck 5s → respawn (grounded=%s input_accel=%.2f)" % [player_name, is_grounded, input_accel])
 			trigger_respawn()
 	else:
 		_stuck_timer = 0.0
@@ -272,9 +290,9 @@ func get_network_state() -> Dictionary:
 	}
 
 func apply_network_state(state: Dictionary) -> void:
-	var p := state.get("pos", [0, 0, 0])
-	var r := state.get("rot", [0, 0, 0])
-	var v := state.get("vel", [0, 0, 0])
+	var p: Array = state.get("pos", [0, 0, 0])
+	var r: Array = state.get("rot", [0, 0, 0])
+	var v: Array = state.get("vel", [0, 0, 0])
 	_net_states.append({
 		"pos": Vector3(p[0], p[1], p[2]),
 		"rot": Vector3(r[0], r[1], r[2]),
@@ -312,7 +330,7 @@ func _update_animation() -> void:
 
 
 func _get_target_anim_state() -> String:
-	var speed := abs(current_speed)
+	var speed: float = abs(current_speed)
 	if is_drifting:
 		return "anim_drift_left" if drift_direction == -1 else "anim_drift_right"
 	if input_brake > 0.1 and speed > 1.0:
@@ -386,8 +404,26 @@ func _interpolate_network(_delta: float) -> void:
 			s0 = _net_states[i]
 			s1 = _net_states[i + 1]
 			break
-	var dt := s1["t"] - s0["t"]
-	var alpha := 0.0 if dt < 0.001 else clamp((now - s0["t"]) / dt, 0.0, 1.0)
+	var dt: float = float(s1["t"]) - float(s0["t"])
+	var alpha: float = 0.0 if dt < 0.001 else clamp((now - float(s0["t"])) / dt, 0.0, 1.0)
 	global_position = s0["pos"].lerp(s1["pos"], alpha)
 	global_rotation = s0["rot"].lerp(s1["rot"], alpha)
 	linear_velocity = s0["vel"].lerp(s1["vel"], alpha)
+
+
+# ── Debug logging ────────────────────────────────────────────────────────────
+
+func _debug_log_input() -> void:
+	if is_interpolated:
+		return
+	_dbg_log_timer += get_process_delta_time()
+	var any_input: bool = input_accel > 0.05 or input_brake > 0.05 or abs(input_steer) > 0.05 or input_drift
+	if any_input and not _dbg_input_logged:
+		_dbg_input_logged = true
+		print("[Kart:%s] first input received — accel=%.2f brake=%.2f steer=%.2f drift=%s" % [
+			player_name, input_accel, input_brake, input_steer, input_drift])
+	if _dbg_log_timer >= _DBG_LOG_INTERVAL:
+		_dbg_log_timer = 0.0
+		print("[Kart:%s] state — speed=%.1fkm/h grounded=%s frozen=%s accel=%.2f steer=%.2f pos=%s" % [
+			player_name, speed_kmh, is_grounded, is_frozen, input_accel, input_steer,
+			"(%.1f,%.1f,%.1f)" % [global_position.x, global_position.y, global_position.z]])
